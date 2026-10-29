@@ -6,7 +6,7 @@ works in any browser on any device.
 
 ## 🎮 Play Now
 
-**▶ [Play HydroQuest Jr.](https://karim-sherif-mostafa.github.io/Hydrology-Games/hydroquest-jr.html)**
+**▶ [Play HydroQuest Jr.](https://karim-sherif-mostafa.github.io/hydroquest-jr.html/)**
 
 ## 🧩 How It Works
 
