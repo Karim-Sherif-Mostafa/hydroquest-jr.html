@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HydroQuest Jr. — Wetman & Puzzle Edition</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;}
+body{background:linear-gradient(180deg,#7ec8f7 0%,#cfeafd 40%,#eaf6ff 100%);min-height:100vh;padding:16px;}
+.wrap{max-width:900px;margin:0 auto;}
+header{text-align:center;padding:14px 0 4px;}
+header h1{color:#083b66;font-size:1.9rem;letter-spacing:1px;}
+header p{color:#3a6b94;margin-top:4px;font-size:.95rem;}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 6px 18px rgba(10,60,110,.18);margin-top:14px;}
+/* ---------- STAGE ---------- */
+#stage{position:relative;background:linear-gradient(180deg,#8fd3ff 0%,#c9ecff 55%,#a8d8a8 56%,#8fca8f 100%);
+  border-radius:16px;height:300px;overflow:hidden;box-shadow:inset 0 0 0 3px #fff;}
+.piece{opacity:0;transform:scale(.3);transform-origin:center;transition:opacity .5s,transform .5s;}
+.piece.show{opacity:1;transform:scale(1);animation:pop .55s ease;}
+@keyframes pop{0%{transform:scale(.2);}60%{transform:scale(1.15);}100%{transform:scale(1);}}
+/* animations inside the scene */
+.rain-line{animation:rainfall 1s linear infinite;}
+@keyframes rainfall{from{transform:translateY(-10px);}to{transform:translateY(26px);}}
+.cloud{animation:drift 9s ease-in-out infinite alternate;}
+.cloud.c2{animation-duration:12s;}
+@keyframes drift{from{transform:translateX(0);}to{transform:translateX(34px);}}
+.sun-rays{animation:spin 14s linear infinite;transform-origin:center;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.flow{stroke-dasharray:10 8;animation:flowmove 1.2s linear infinite;}
+@keyframes flowmove{to{stroke-dashoffset:-36;}}
+.wave{animation:wavebob 2.4s ease-in-out infinite alternate;}
+@keyframes wavebob{from{transform:translateY(0);}to{transform:translateY(-4px);}}
+/* ---------- WETMAN ---------- */
+#wetman{position:absolute;right:14px;bottom:8px;width:110px;height:150px;z-index:5;}
+#droplet{animation:wobble 2.2s ease-in-out infinite;transform-origin:50% 90%;}
+@keyframes wobble{0%,100%{transform:rotate(-4deg);}50%{transform:rotate(4deg);}}
+#wetman.hurt #droplet{animation:shake .45s;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px) rotate(-6deg);}75%{transform:translateX(8px) rotate(6deg);}}
+#wm-eye{transition:.2s;}
+#wm-mouth-happy{transition:.2s;}#wm-mouth-sad{opacity:0;transition:.2s;}
+#wetman.sad #wm-mouth-happy{opacity:0;}#wetman.sad #wm-mouth-sad{opacity:1;}
+#wetman.dry{filter:grayscale(.9) brightness(.85);}
+.drop{position:absolute;bottom:100px;font-size:22px;transition:.3s;}
+/* ---------- HUD ---------- */
+.hud{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px;}
+.badge{background:#fff;border-radius:22px;padding:7px 16px;font-weight:700;color:#083b66;
+  box-shadow:0 3px 8px rgba(10,60,110,.15);font-size:.9rem;}
+.badge span{color:#0a66c2;}
+/* ---------- QUESTION ---------- */
+.qbox{margin-top:14px;}
+.qtext{font-size:1.08rem;font-weight:600;color:#14324a;margin-bottom:12px;line-height:1.5;}
+.formula{background:#0b1d2c;color:#8fe3ff;font-family:Consolas,monospace;padding:9px 14px;border-radius:8px;
+  margin:10px 0;text-align:center;}
+.opts{display:flex;flex-direction:column;gap:8px;}
+.opts button{background:#eef4fa;border:2px solid #cfe0f0;border-radius:10px;padding:12px;text-align:left;
+  font-size:.98rem;cursor:pointer;transition:.15s;}
+.opts button:hover{border-color:#0a66c2;transform:translateX(4px);}
+.opts button.correct{background:#dcf5e4;border-color:#2e9e5b;}
+.opts button.wrong{background:#fbe1e1;border-color:#d64545;animation:shake .4s;}
+input[type=number]{padding:11px;border:2px solid #cfe0f0;border-radius:10px;font-size:1rem;width:150px;}
+button.act{background:#0a66c2;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-weight:700;
+  cursor:pointer;font-size:.95rem;margin-left:8px;}
+button.act:hover{background:#0855a3;}
+.feedback{margin-top:12px;padding:12px 14px;border-radius:10px;font-weight:600;display:none;}
+.feedback.ok{display:block;background:#dcf5e4;color:#1d6b3a;}
+.feedback.no{display:block;background:#fbe1e1;color:#8f2b2b;}
+.feedback p{font-weight:400;margin-top:5px;font-size:.9rem;}
+.nextrow{display:flex;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:8px;}
+button.ghost{background:#e4ebf2;color:#33475b;border:none;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;}
+/* lives */
+#lives{font-size:1.3rem;letter-spacing:3px;}
+#lives .lost{opacity:.25;filter:grayscale(1);}
+/* win overlay */
+#win{position:fixed;inset:0;background:rgba(8,40,70,.85);display:none;align-items:center;justify-content:center;z-index:50;}
+#win.show{display:flex;}
+#win .inner{background:#fff;border-radius:20px;padding:34px 44px;text-align:center;max-width:420px;animation:pop .6s;}
+#win h2{color:#083b66;margin-bottom:10px;}
+.trophy{font-size:4rem;animation:bounce 1.2s infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
+#confetti{position:fixed;inset:0;pointer-events:none;display:none;z-index:60;}
+@media(max-width:600px){#stage{height:230px;}header h1{font-size:1.4rem;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>💧 HydroQuest Jr.</h1>
+    <p>Wetman &amp; Puzzle Edition — answer correctly to rebuild the watershed, or the droplet dries out!</p>
+  </header>
+
+  <!-- ============ ANIMATED SCENE (the puzzle) ============ -->
+  <div id="stage">
+    <svg viewBox="0 0 900 300" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+      <!-- 1 SUN -->
+      <g id="p1" class="piece">
+        <g class="sun-rays" style="transform-origin:105px 60px;" stroke="#ffcf3d" stroke-width="6" stroke-linecap="round">
+          <line x1="105" y1="14" x2="105" y2="28"/><line x1="105" y1="92" x2="105" y2="106"/>
+          <line x1="59" y1="60" x2="73" y2="60"/><line x1="137" y1="60" x2="151" y2="60"/>
+          <line x1="72" y1="27" x2="82" y2="37"/><line x1="128" y1="27" x2="118" y2="37"/>
+          <line x1="72" y1="93" x2="82" y2="83"/><line x1="128" y1="93" x2="118" y2="83"/>
+        </g>
+        <circle cx="105" cy="60" r="26" fill="#ffdf5e" stroke="#f5b921" stroke-width="4"/>
+      </g>
+      <!-- 2 CLOUDS -->
+      <g id="p2" class="piece">
+        <g class="cloud" fill="#fff" opacity=".95">
+          <ellipse cx="330" cy="55" rx="52" ry="22"/><ellipse cx="365" cy="44" rx="38" ry="18"/><ellipse cx="300" cy="44" rx="30" ry="15"/>
+        </g>
+        <g class="cloud c2" fill="#fff" opacity=".85">
+          <ellipse cx="560" cy="42" rx="44" ry="18"/><ellipse cx="590" cy="34" rx="30" ry="14"/>
+        </g>
+      </g>
+      <!-- 3 RAIN -->
+      <g id="p3" class="piece" stroke="#4aa8e8" stroke-width="3" stroke-linecap="round">
+        <line class="rain-line" x1="315" y1="75" x2="309" y2="92"/><line class="rain-line" x1="345" y1="75" x2="339" y2="92" style="animation-delay:.2s"/>
+        <line class="rain-line" x1="375" y1="72" x2="369" y2="89" style="animation-delay:.4s"/><line class="rain-line" x1="550" y1="62" x2="544" y2="79" style="animation-delay:.1s"/>
+        <line class="rain-line" x1="580" y1="62" x2="574" y2="79" style="animation-delay:.5s"/><line class="rain-line" x1="610" y1="62" x2="604" y2="79" style="animation-delay:.3s"/>
+      </g>
+      <!-- 4 MOUNTAINS -->
+      <g id="p4" class="piece">
+        <polygon points="80,168 230,60 380,168" fill="#7a9e6e"/>
+        <polygon points="230,60 285,102 255,120 220,98 195,115 175,100" fill="#fff"/>
+        <polygon points="300,168 430,84 560,168" fill="#93b884"/>
+        <rect x="0" y="160" width="900" height="8" fill="#6fae6f"/>
+      </g>
+      <!-- 5 RIVER -->
+      <g id="p5" class="piece">
+        <path class="flow" d="M400,168 C430,200 380,225 440,255 C470,270 520,272 560,292" fill="none" stroke="#3d9be0" stroke-width="26" stroke-linecap="round" opacity=".9"/>
+        <path class="wave" d="M380,290 q14,-9 28,0 q14,9 28,0" fill="none" stroke="#bfe6ff" stroke-width="4"/>
+      </g>
+      <!-- 6 TREES -->
+      <g id="p6" class="piece">
+        <g><rect x="205" y="128" width="7" height="26" fill="#8a5a2b"/><circle cx="208" cy="118" r="17" fill="#3e8e4f"/><circle cx="198" cy="126" r="11" fill="#4aa85e"/></g>
+        <g><rect x="478" y="132" width="7" height="24" fill="#8a5a2b"/><circle cx="481" cy="122" r="15" fill="#3e8e4f"/></g>
+        <g><rect x="640" y="136" width="7" height="22" fill="#8a5a2b"/><circle cx="643" cy="127" r="14" fill="#4aa85e"/><circle cx="653" cy="134" r="9" fill="#3e8e4f"/></g>
+      </g>
+      <!-- 7 DAM -->
+      <g id="p7" class="piece">
+        <polygon points="585,168 655,168 665,262 575,262" fill="#b8b2a7" stroke="#8f887a" stroke-width="3"/>
+        <line x1="590" y1="185" x2="652" y2="185" stroke="#8f887a" stroke-width="2"/>
+        <line x1="588" y1="205" x2="657" y2="205" stroke="#8f887a" stroke-width="2"/>
+        <rect x="612" y="150" width="18" height="18" fill="#8f887a"/>
+        <path class="flow" d="M575,240 q-20,8 -22,22" fill="none" stroke="#7cc4f0" stroke-width="7"/>
+      </g>
+      <!-- 8 RAIN GAUGE STATION -->
+      <g id="p8" class="piece">
+        <rect x="120" y="200" width="6" height="48" fill="#666"/>
+        <path d="M105,200 h36 l-6,22 h-24 z" fill="#ffd34d" stroke="#d9a520" stroke-width="2"/>
+        <rect x="96" y="248" width="54" height="5" fill="#777"/>
+        <circle cx="123" cy="192" r="6" fill="#4aa8e8"/>
+      </g>
+      <!-- 9 CITY -->
+      <g id="p9" class="piece">
+        <rect x="700" y="196" width="34" height="56" fill="#7f9bb3"/>
+        <rect x="740" y="180" width="40" height="72" fill="#9db4c8"/>
+        <rect x="786" y="204" width="30" height="48" fill="#7f9bb3"/>
+        <g fill="#fff8d6"><rect x="706" y="204" width="7" height="7"/><rect x="720" y="204" width="7" height="7"/>
+        <rect x="706" y="220" width="7" height="7"/><rect x="746" y="190" width="8" height="8"/><rect x="762" y="190" width="8" height="8"/>
+        <rect x="746" y="208" width="8" height="8"/><rect x="762" y="208" width="8" height="8"/><rect x="792" y="212" width="7" height="7"/></g>
+      </g>
+      <!-- 10 HYDROGRAPH PANEL -->
+      <g id="p10" class="piece">
+        <rect x="360" y="12" width="200" height="86" rx="8" fill="#0b1d2c" opacity=".92"/>
+        <text x="376" y="32" fill="#8fe3ff" font-size="13" font-family="monospace">DISCHARGE Q (m³/s)</text>
+        <path d="M376,86 L400,86 L416,50 L432,40 L470,66 L520,84 L548,86" fill="none" stroke="#ffd34d" stroke-width="3"/>
+        <circle cx="432" cy="40" r="4" fill="#ff6b6b"/>
+        <text x="440" y="38" fill="#ff9d9d" font-size="11" font-family="monospace">peak!</text>
+      </g>
+    </svg>
+
+    <!-- WETMAN character -->
+    <div id="wetman">
+      <svg viewBox="0 0 100 140" width="100%" height="100%">
+        <g id="droplet">
+          <path d="M50,8 C50,8 14,62 14,88 a36,36 0 0,0 72,0 C86,62 50,8 50,8 z" fill="#4aa8e8" stroke="#2b7fc4" stroke-width="3"/>
+          <ellipse cx="36" cy="70" rx="9" ry="15" fill="#8fd0f5" opacity=".7"/>
+          <circle id="wm-eye" cx="40" cy="88" r="5" fill="#083b66"/>
+          <circle cx="62" cy="88" r="5" fill="#083b66"/>
+          <circle cx="42" cy="86" r="1.6" fill="#fff"/><circle cx="64" cy="86" r="1.6" fill="#fff"/>
+          <path id="wm-mouth-happy" d="M40,102 q10,10 20,0" fill="none" stroke="#083b66" stroke-width="3.4" stroke-linecap="round"/>
+          <path id="wm-mouth-sad" d="M40,108 q10,-10 20,0" fill="none" stroke="#083b66" stroke-width="3.4" stroke-linecap="round"/>
+          <ellipse cx="30" cy="98" rx="5" ry="3.4" fill="#ff9d9d" opacity=".7"/>
+          <ellipse cx="70" cy="98" rx="5" ry="3.4" fill="#ff9d9d" opacity=".7"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="badge">🧩 Pieces: <span id="pieces">0</span>/10</div>
+    <div class="badge" id="lives">💧💧💧💧💧</div>
+    <div class="badge">⭐ Score: <span id="score">0</span></div>
+  </div>
+
+  <!-- QUESTION AREA -->
+  <div class="card qbox" id="qbox"></div>
+</div>
+
+<!-- WIN OVERLAY -->
+<div id="win"><div class="inner">
+  <div class="trophy">🏆</div>
+  <h2>Watershed Restored!</h2>
+  <p id="winmsg"></p>
+  <p style="margin-top:10px;"><b>Final score: <span id="winscore">0</span> ⭐</b></p>
+  <button class="act" style="margin-top:16px;" onclick="location.reload()">🔁 Play Again</button>
+</div></div>
+<canvas id="confetti"></canvas>
+
+<script>
+/* ================= QUESTION BANK ================= */
+const Q=[
+ {piece:1, tag:"The Sun ☀️",
+  q:"Every water cycle starts with energy. Which process does the Sun's heat drive to lift water into the atmosphere?",
+  type:"mcq", opts:["Condensation","Evaporation","Infiltration","Runoff"], a:1,
+  why:"Solar energy heats water surfaces — evaporation (liquid → vapour) sends moisture into the atmosphere."},
+ {piece:2, tag:"Clouds ☁️",
+  q:"Water vapour cools high in the sky and forms tiny droplets around dust — creating clouds. This process is called:",
+  type:"mcq", opts:["Precipitation","Transpiration","Condensation","Evaporation"], a:2,
+  why:"Condensation (vapour → liquid) forms cloud droplets around condensation nuclei."},
+ {piece:3, tag:"Rainfall 🌧️",
+  q:"A tipping-bucket rain gauge tipped 150 times during a storm. Each tip = 0.2 mm. How much rain fell?",
+  type:"num", ans:30, unit:"mm",
+  why:"Depth = 150 × 0.2 = 30 mm."},
+ {piece:4, tag:"Mountains ⛰️",
+  q:"That 30 mm storm fell over a 4 km² mountain catchment. What volume of water is that? (V = P × A × 1000)",
+  type:"num", ans:120000, unit:"m³",
+  why:"V = 30 mm × 4 km² × 1000 = 120,000 m³."},
+ {piece:5, tag:"The River 🏞️",
+  q:"A catchment has C = 0.5, rainfall intensity i = 36 mm/hr, area A = 1 km². Peak discharge: Q = CiA/3.6 = ?",
+  type:"num", ans:5, unit:"m³/s",
+  why:"Q = 0.5 × 36 × 1 / 3.6 = 5 m³/s."},
+ {piece:6, tag:"Forests 🌲",
+  q:"A forested hillside has curve number CN = 80. Find the retention S = 25400/CN − 254 (mm).",
+  type:"num", ans:63.5, unit:"mm",
+  why:"S = 25400/80 − 254 = 317.5 − 254 = 63.5 mm. Forests store lots of water!"},
+ {piece:7, tag:"The Dam 🚧",
+  q:"A reservoir receives 5 Mm³ of inflow, releases 3 Mm³, and loses 1 Mm³ to evaporation this month. What happens to storage (ΔS)?",
+  type:"mcq", opts:["ΔS = −1 Mm³ (falls)","ΔS = +1 Mm³ (rises)","ΔS = 0 (no change)","ΔS = +9 Mm³"], a:1,
+  why:"ΔS = In − Out − Evap = 5 − 3 − 1 = +1 Mm³ → the reservoir pool RISES."},
+ {piece:8, tag:"Gauge Station 🌡️",
+  q:"Kirpich: for L = 1000 m and slope S = 0.01, t_c = 0.0195·L^0.77/S^0.385 ≈ ? (minutes)",
+  type:"num", ans:22.5, unit:"min", tol:1.5,
+  why:"t_c = 0.0195 × 1000^0.77 / 0.01^0.385 ≈ 22.5 minutes."},
+ {piece:9, tag:"The City 🏙️",
+  q:"A city catchment gets P = 1000 mm/yr, evapotranspiration ET = 600 mm/yr, and long-term storage change ΔS = 0. Runoff R = ?",
+  type:"num", ans:400, unit:"mm",
+  why:"Water balance: R = P − ET − ΔS = 1000 − 600 − 0 = 400 mm/yr."},
+ {piece:10, tag:"Hydrograph 📈",
+  q:"A bridge is designed for the 50-year flood. What is the probability (%) it is NOT exceeded in any given year?",
+  type:"num", ans:98, unit:"%", tol:0.5,
+  why:"P = (1 − 1/50) × 100 = 98%. The '50-year' flood has a 2% chance EVERY year!"},
+];
+
+/* ================= STATE ================= */
+let qi=0, score=0, pieces=0, lives=5, answered=false;
+const $=id=>document.getElementById(id);
+
+function renderQ(){
+  answered=false;
+  const q=Q[qi];
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <span class="badge">Question ${qi+1}/10</span>
+    <span class="badge">Next piece: <b>${q.tag}</b></span></div>
+    <div class="qtext">${q.q}</div>`;
+  if(q.type==="mcq"){
+    html+=`<div class="opts">`+q.opts.map((o,i)=>`<button onclick="answer(${i})">${o}</button>`).join('')+`</div>`;
+  }else{
+    html+=`<input type="number" id="numin" step="any" placeholder="Your answer…" onkeydown="if(event.key==='Enter')answerNum()">
+    <span style="font-weight:700;"> ${q.unit}</span>
+    <button class="act" onclick="answerNum()">Check ✔</button>`;
+  }
+  html+=`<div class="feedback" id="fb"></div>`;
+  $("qbox").innerHTML=html;
+}
+
+function showFB(ok,msg,why){
+  $("fb").className="feedback "+(ok?"ok":"no");
+  $("fb").innerHTML=(ok?"✅ Correct! +10 ⭐ ":"❌ "+msg)+(why?`<p>💡 ${why}</p>`:"");
+}
+
+function revealPiece(){
+  const p=$("p"+Q[qi].piece);
+  p.classList.add("show");
+  pieces++; $("pieces").textContent=pieces;
+}
+
+function nextQ(){
+  qi++;
+  if(qi>=Q.length){ winGame(); return; }
+  const nr=document.createElement("div");
+  nr.className="nextrow";
+  nr.innerHTML=`<span></span><button class="act" onclick="renderQ()">Next Question ▶</button>`;
+  $("qbox").appendChild(nr);
+}
+
+function answer(i){
+  if(answered)return; answered=true;
+  const q=Q[qi]; const btns=$("qbox").querySelectorAll(".opts button");
+  btns[q.a].classList.add("correct");
+  if(i===q.a){ score+=10; $("score").textContent=score; showFB(true,"",q.why); revealPiece(); nextQ(); }
+  else{ btns[i].classList.add("wrong"); wrong(q); }
+}
+function answerNum(){
+  if(answered)return;
+  const q=Q[qi]; const v=parseFloat($("numin").value);
+  const tol=q.tol||Math.max(0.05,Math.abs(q.ans)*0.015);
+  if(isFinite(v)&&Math.abs(v-q.ans)<=tol){ answered=true; score+=10; $("score").textContent=score;
+    showFB(true,"",q.why); revealPiece(); nextQ(); }
+  else wrong(q, isFinite(v)?("the correct answer is "+q.ans+" "+q.unit+"."):"enter a number!");
+}
+function wrong(q,msg){
+  lives--;
+  const wm=$("wetman");
+  wm.classList.remove("hurt"); void wm.offsetWidth; wm.classList.add("hurt","sad");
+  setTimeout(()=>wm.classList.remove("sad"),1200);
+  $("lives").innerHTML=Array.from({length:5},(_,i)=>`<span class="${i<lives?'':'lost'}">💧</span>`).join('');
+  showFB(false,msg||"try again!",q.why);
+  if(lives<=0){
+    $("qbox").innerHTML=`<div class="feedback no" style="display:block">😢 Oh no! The droplet has dried out!
+      <p>The watershed needs a true hydrologist. Don't worry — you can try again right away!</p></div>
+      <button class="act" style="margin-top:12px;" onclick="resetGame()">🔁 Try Again</button>`;
+    wm.classList.add("dry");
+  }
+}
+function resetGame(){
+  lives=5; qi=0; score=0; pieces=0;
+  $("score").textContent=0; $("pieces").textContent=0;
+  $("lives").innerHTML="💧💧💧💧💧";
+  $("wetman").classList.remove("dry");
+  document.querySelectorAll(".piece").forEach(p=>p.classList.remove("show"));
+  renderQ();
+}
+function winGame(){
+  $("winmsg").textContent="You answered all 10 questions and restored every piece of the watershed — sun, clouds, rain, river, dam and all!";
+  $("winscore").textContent=score;
+  $("win").classList.add("show");
+  confetti();
+}
+function confetti(){
+  const c=$("confetti"); c.style.display="block";
+  const x=c.getContext("2d"); c.width=innerWidth; c.height=innerHeight;
+  const P=Array.from({length:180},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height,
+    r:4+Math.random()*7,vy:2+Math.random()*4,vx:-2+Math.random()*4,
+    col:`hsl(${Math.random()*360},90%,60%)`}));
+  let t=0;(function anim(){x.clearRect(0,0,c.width,c.height);
+    P.forEach(p=>{p.y+=p.vy;p.x+=p.vx;x.fillStyle=p.col;x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill();});
+    if(++t<200)requestAnimationFrame(anim);else c.style.display="none";})();
+}
+renderQ();
+</script>
+</body>
+</html>
